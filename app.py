@@ -11,22 +11,17 @@ app = App(token=os.environ["SLACK_BOT_TOKEN"])
 DB_NAME = os.environ["DB_NAME"]
 
 
-def execute_sql(sql):
-    con = sqlite3.connect(DB_NAME)
-    cur = con.cursor()
-    res = cur.execute(sql)
-    con.commit()
-    return res
-
-
 def init_db():
-    sql = "CREATE TABLE IF NOT EXISTS keywords(keyword text unique)"
-    execute_sql(sql)
+    with sqlite3.connect(DB_NAME) as con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS keywords(keyword text unique)")
 
 
 def get_regexp_keywords():
-    sql = "SELECT keyword FROM keywords"
-    res = execute_sql(sql)
+    with sqlite3.connect(DB_NAME) as con:
+        cur = con.cursor()
+        res = cur.execute("SELECT keyword FROM keywords")
+
     keywords = list(map(lambda keyword: keyword[0], res.fetchall()))
 
     return "|".join(keywords) if keywords else "[]"
@@ -91,8 +86,12 @@ def config_target_words(say):
 def add_keyword(ack, payload, say):
     ack()
 
-    sql = f"INSERT OR IGNORE INTO keywords VALUES ('{payload['value']}')"
-    execute_sql(sql)
+    with sqlite3.connect(DB_NAME) as con:
+        cur = con.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO keywords VALUES (?)", (payload["value"],)
+        )
+        con.commit()
 
     regexp_keywords = get_regexp_keywords()
 
@@ -112,8 +111,12 @@ def add_keyword(ack, payload, say):
 def delete_keyword(ack, payload, say):
     ack()
 
-    sql = f"DELETE FROM keywords WHERE keyword = '{payload['value']}'"
-    execute_sql(sql)
+    with sqlite3.connect(DB_NAME) as con:
+        cur = con.cursor()
+        cur.execute(
+            "DELETE FROM keywords WHERE keyword = ?", (payload["value"],)
+        )
+        con.commit()
 
     regexp_keywords = get_regexp_keywords()
 
