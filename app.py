@@ -26,13 +26,18 @@ def init_db(init_keywords):
         con.commit()
 
 
-def get_regexp_keywords():
+def get_keywords():
     with sqlite3.connect(DB_NAME) as con:
         cur = con.cursor()
         res = cur.execute("SELECT keyword FROM keywords")
 
     keywords = list(map(lambda keyword: keyword[0], res.fetchall()))
 
+    return keywords
+
+
+def get_regexp_keywords():
+    keywords = get_keywords()
     return "|".join(keywords) if keywords else "[]"
 
 
@@ -43,25 +48,24 @@ def handle_message_events(body, say, client):
     timestamp = body["event"]["ts"]
     regexp_keywords = get_regexp_keywords()
     if text == "ピン留め条件":
-        config_target_words(say)
+        config_target_words(say, client, channel)
     elif regexp_keywords != "[]" and re.findall(
         re.compile(regexp_keywords, re.IGNORECASE), text
     ):
         client.pins_add(channel=channel, timestamp=timestamp)
 
 
-def config_target_words(say):
-    regexp_keywords = get_regexp_keywords()
+def config_target_words(say, client, channel):
+    keywords = "\n".join(get_keywords())
+    client.files_upload_v2(
+        channel=channel,
+        content=keywords,
+        filename="keywords.txt",
+        title="現在のピン留め条件",
+    )
 
     say(
         blocks=[
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*現在のピン留め条件*\n```{regexp_keywords}\n```",
-                },
-            },
             {
                 "dispatch_action": True,
                 "type": "input",
@@ -102,18 +106,7 @@ def add_keyword(ack, payload, say):
         )
         con.commit()
 
-    regexp_keywords = get_regexp_keywords()
-
-    blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"ピン留め条件を更新しました。\n```\n{regexp_keywords}\n```",
-            },
-        }
-    ]
-    say(blocks=blocks, text="ピン留め条件を更新しました。")
+    say(text="ピン留め条件を更新しました。")
 
 
 @app.action("delete_keyword")
@@ -127,18 +120,7 @@ def delete_keyword(ack, payload, say):
         )
         con.commit()
 
-    regexp_keywords = get_regexp_keywords()
-
-    blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"ピン留め条件を更新しました。\n```\n{regexp_keywords}\n```",
-            },
-        }
-    ]
-    say(blocks=blocks, text="ピン留め条件を更新しました。")
+    say(text="ピン留め条件を更新しました。")
 
 
 # アプリを起動します
