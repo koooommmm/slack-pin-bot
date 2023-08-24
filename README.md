@@ -3,6 +3,17 @@
 ## 概要
 - Slackに投稿されたメッセージ内に指定した語句が含まれていた場合、そのメッセージをピン留めするボットです。
 
+## ボットの権限
+- Bot Token Scopesとして下記の権限が必要
+  - channels:history
+  - chat:write
+  - files:read
+  - files:write
+  - groups:history
+  - im:history
+  - mpim:history
+  - pins:write
+
 ## 使い方
 - `.env`に環境変数としてトークンやDB名を記入
 - ボットの起動
