@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import sqlite3
@@ -10,11 +11,19 @@ load_dotenv()
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
 DB_NAME = os.environ["DB_NAME"]
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--file")
 
-def init_db():
+
+def init_db(init_keywords):
     with sqlite3.connect(DB_NAME) as con:
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS keywords(keyword text unique)")
+
+        cur.executemany(
+            "INSERT OR IGNORE INTO keywords VALUES (?)", init_keywords
+        )
+        con.commit()
 
 
 def get_regexp_keywords():
@@ -134,5 +143,14 @@ def delete_keyword(ack, payload, say):
 
 # アプリを起動します
 if __name__ == "__main__":
-    init_db()
+    args = parser.parse_args()
+    init_keywords = []
+
+    if args.file:
+        with open(args.file, "r") as f:
+            init_keywords = list(
+                map(lambda keyword: (keyword,), f.read().split())
+            )
+
+    init_db(init_keywords)
     SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
